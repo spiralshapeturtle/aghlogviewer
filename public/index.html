@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdGuard Home Log Viewer</title>
+    <style>
+        :root {
+            --primary: #0061c7;
+            --primary-dark: #004a99;
+            --secondary: #53b324;
+            --light-bg: #f5f7fa;
+            --border: #ddd;
+            --text: #333;
+            --text-light: #666;
+            --blocked: #e74c3c;
+            --allowed: #2ecc71;
+            --rewrite: #f39c12;
+            --cached: #3498db;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        body {
+            background: var(--light-bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        header {
+            background: var(--primary);
+            color: #fff;
+            padding: 0.25rem 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            height: 32px;
+            display: flex;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .controls-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            align-items: center;
+        }
+
+        .control-group,
+        .filter-input {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        button {
+            padding: 0.35rem 0.75rem;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+        }
+
+        button:disabled {
+            background: var(--text-light);
+            cursor: not-allowed;
+        }
+
+        input,
+        select {
+            padding: 0.35rem 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        label {
+            font-weight: 500;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+
+        .status {
+            margin-left: auto;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .status.running {
+            color: var(--secondary);
+        }
+
+        .status.paused {
+            color: var(--text-light);
+        }
+
+        .table-container {
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            overflow: auto;
+            max-height: calc(100vh - 105px);
+        }
+
+        table {
+            width: 100%;
+            min-width: 900px;
+            border-collapse: collapse;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 10;
+        }
+
+        th,
+        td {
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            border-bottom: 2px solid var(--border);
+            font-weight: 600;
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background: var(--light-bg);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .badge.filtered {
+            background: var(--blocked);
+        }
+
+        .badge.allowed {
+            background: var(--allowed);
+        }
+
+        .badge.rewrite {
+            background: var(--rewrite);
+        }
+
+        .badge.cached {
+            background: var(--cached);
+        }
+
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 80px;
+            text-align: right;
+        }
+
+        .details-btn {
+            background: #f0f0f0;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        .details-btn:hover {
+            background: #e9e9e9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background: #fff;
+            margin: 5% auto;
+            padding: 1.2rem;
+            border-radius: 6px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .close {
+            color: var(--text-light);
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: var(--text);
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 0.75rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+
+        footer {
+            padding: 0.25rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            flex-grow: 1;
+        }
+
+        .filter-input {
+            flex-grow: 1;
+            min-width: 120px;
+        }
+
+        .filter-input input,
+        .filter-input select {
+            width: 100%;
+        }
+
+        .filter-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            gap: 0.25rem;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.15rem 0.4rem;
+            background: #f0f0f0;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: var(--text);
+            margin-right: 0.2rem;
+        }
+
+        .client-chip {
+            background-color: #e8f4fd;
+            color: #0061c7;
+        }
+
+        /* Alternatieve rijen voor betere leesbaarheid */
+        tr:nth-child(even) {
+            background-color: #fafbfc;
+        }
+
+        @media (max-width: 1200px) {
+            .filter-group {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .status {
+                margin-left: 0;
+                margin-top: 0.25rem;
+            }
+
+            /* Verberg Type, Client, Reden, Status en Details */
+            table thead th:nth-child(4),
+            table tbody td:nth-child(4),
+            table thead th:nth-child(5),
+            table tbody td:nth-child(5),
+            table thead th:nth-child(8),
+            table tbody td:nth-child(8),
+            table thead th:nth-child(9),
+            table tbody td:nth-child(9),
+            table thead th:nth-child(10),
+            table tbody td:nth-child(10) {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <h1>AdGuard Home Log Viewer</h1>
+        </div>
+    </header>
+    <main class="container">
+        <div class="controls-container">
+            <div class="controls-row">
+                <div class="control-group">
+                    <button id="toggleBtn">Pauzeren</button>
+                    <button id="refreshBtn">Nu verversen</button>
+                </div>
+                <div class="control-group">
+                    <label for="refreshRate">Ververssnelheid:</label>
+                    <select id="refreshRate">
+                        <option value="1000">1 sec</option>
+                        <option value="2000">2 sec</option>
+                        <option value="5000" selected>5 sec</option>
+                        <option value="10000">10 sec</option>
+                        <option value="30000">30 sec</option>
+                        <option value="60000">60 sec</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="maxEntries">Max rijen:</label>
+                    <select id="maxEntries">
+                        <option value="50">50</option>
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+                <div class="status running" id="statusIndicator">
+                    <span id="statusText">Actief</span> (<span id="entryCount">0</span> logs geladen)
+                </div>
+            </div>
+            <div class="controls-row">
+                <div class="filter-group">
+                    <div class="filter-input">
+                        <div class="filter-label">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <span>Domein</span>
+                        </div>
+                        <input type="text" id="domainFilter" placeholder="Filter op domein...">
+                    </div>
+                    <div class="filter-input">
+                        <div class="filter-label">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <span>Client</span>
+                        </div>
+                        <input type="text" id="clientFilter" placeholder="Filter op client...">
+                    </div>
+                    <div class="filter-input">
+                        <div class="filter-label">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                            </svg>
+                            <span>Status</span>
+                        </div>
+                        <select id="statusFilter">
+                            <option value="">Alle statussen</option>
+                            <option value="FilteredBlackList">Geblokkeerd</option>
+                            <option value="NotFilteredNotFound">Toegestaan</option>
+                            <option value="Rewrite">Herschreven</option>
+                            <option value="NXDOMAIN">NXDOMAIN</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:110px;">Tijd</th>
+                        <th style="width:50px; text-align:center;">Cached</th>
+                        <th style="width:60px; text-align:right;">Tijd (ms)</th>
+                        <th>Type</th>
+                        <th>Client</th>
+                        <th>Upstream</th>
+                        <th>Domein</th>
+                        <th>Reden</th>
+                        <th>Status</th>
+                        <th style="width:60px;">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="logTable"></tbody>
+            </table>
+        </div>
+    </main>
+    <footer>
+        <p>AdGuard Home Log Viewer</p>
+    </footer>
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Log Details</h2><span class="close">&times;</span>
+            </div>
+            <div id="modalBody">
+                <pre id="jsonContent"></pre>
+            </div>
+        </div>
+    </div>
+    <script>
+        const config = { refreshRate: 5000, maxEntries: 100, isRunning: true, timer: null };
+        const elements = {
+            logTable: document.getElementById('logTable'),
+            toggleBtn: document.getElementById('toggleBtn'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            refreshRate: document.getElementById('refreshRate'),
+            maxEntries: document.getElementById('maxEntries'),
+            statusIndicator: document.getElementById('statusIndicator'),
+            statusText: document.getElementById('statusText'),
+            entryCount: document.getElementById('entryCount'),
+            detailsModal: document.getElementById('detailsModal'),
+            jsonContent: document.getElementById('jsonContent'),
+            closeModal: document.querySelector('.close'),
+            domainFilter: document.getElementById('domainFilter'),
+            clientFilter: document.getElementById('clientFilter'),
+            statusFilter: document.getElementById('statusFilter')
+        };
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch(`/api/querylog?count=${config.maxEntries}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                return data.data || data;
+            } catch (e) {
+                console.error('Error fetching logs:', e);
+                return [];
+            }
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts);
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+        }
+
+        function getStatusBadgeClass(reason) {
+            if (reason === 'FilteredBlackList') return 'filtered';
+            if (reason === 'NotFilteredNotFound') return 'allowed';
+            if (reason === 'Rewrite') return 'rewrite';
+            return '';
+        }
+
+        function truncateDomain(domain, maxLength = 40) {
+            if (!domain || domain.length <= maxLength) return domain;
+            return domain.substring(0, maxLength) + '...';
+        }
+
+        async function renderLogs() {
+            if (!config.isRunning) return;
+            const logs = await fetchLogs();
+            const df = elements.domainFilter.value.trim().toLowerCase();
+            const cf = elements.clientFilter.value.trim().toLowerCase();
+            const sf = elements.statusFilter.value;
+
+            // Filter logs
+            const filtered = logs.filter(entry => {
+                const domain = entry.question?.name?.toLowerCase() || '';
+                const client = (entry.client_info?.name || entry.client || '').toLowerCase();
+                const reason = entry.reason || '';
+                const matchesDomain = df === '' || domain.includes(df);
+                const matchesClient = cf === '' || client.includes(cf);
+                const matchesStatus = sf === '' || reason === sf;
+                return matchesDomain && matchesClient && matchesStatus;
+            });
+
+            elements.entryCount.textContent = filtered.length;
+
+            // Build rows
+            elements.logTable.innerHTML = filtered.map(entry => {
+                const badge = getStatusBadgeClass(entry.reason);
+                const elapsed = parseFloat(entry.elapsedMs).toFixed(2);
+                const clientName = entry.client_info?.name || entry.client;
+                const domain = entry.question?.name || '';
+
+                return `
+          <tr>
+            <td>${formatTime(entry.time)}</td>
+            <td style="text-align:center">${entry.cached ? '<span class="badge cached">✔</span>' : ''}</td>
+            <td style="text-align:right">${elapsed}</td>
+            <td>${entry.question?.type || ''}</td>
+            <td><span class="chip client-chip">${clientName}</span></td>
+            <td>${entry.upstream}</td>
+            <td title="${domain}">${truncateDomain(domain)}</td>
+            <td><span class="badge ${badge}">${entry.reason}</span></td>
+            <td>${entry.status}</td>
+            <td><button class="details-btn" data-log='${JSON.stringify(entry)}'>Details</button></td>
+          </tr>`;
+            }).join('');
+
+            // Attach detail handlers
+            document.querySelectorAll('.details-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const logData = JSON.parse(btn.dataset.log);
+                    elements.jsonContent.textContent = JSON.stringify(logData, null, 2);
+                    elements.detailsModal.style.display = 'block';
+                });
+            });
+
+            // Schedule next refresh
+            clearTimeout(config.timer);
+            config.timer = setTimeout(renderLogs, config.refreshRate);
+        }
+
+        // Setup controls
+        elements.toggleBtn.addEventListener('click', () => {
+            config.isRunning = !config.isRunning;
+            elements.toggleBtn.textContent = config.isRunning ? 'Pauzeren' : 'Hervatten';
+            elements.statusText.textContent = config.isRunning ? 'Actief' : 'Gepauzeerd';
+            elements.statusIndicator.className = config.isRunning ? 'status running' : 'status paused';
+            if (config.isRunning) renderLogs(); else clearTimeout(config.timer);
+        });
+
+        elements.refreshBtn.addEventListener('click', () => {
+            clearTimeout(config.timer);
+            renderLogs();
+        });
+
+        elements.refreshRate.addEventListener('change', () => {
+            config.refreshRate = +elements.refreshRate.value;
+        });
+
+        elements.maxEntries.addEventListener('change', () => {
+            config.maxEntries = +elements.maxEntries.value;
+            renderLogs();
+        });
+
+        // Debounce functie voor filters
+        function debounce(func, timeout = 300) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            };
+        }
+
+        const debouncedRender = debounce(() => renderLogs());
+
+        elements.domainFilter.addEventListener('input', debouncedRender);
+        elements.clientFilter.addEventListener('input', debouncedRender);
+        elements.statusFilter.addEventListener('change', () => renderLogs());
+
+        elements.closeModal.addEventListener('click', () => {
+            elements.detailsModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', e => {
+            if (e.target === elements.detailsModal) elements.detailsModal.style.display = 'none';
+        });
+
+        // Initial render
+        renderLogs();
+    </script>
+</body>
+
+</html>
