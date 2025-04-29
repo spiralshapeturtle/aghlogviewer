@@ -71,12 +71,6 @@ to see your AdGuard Home logs in real time.
 
 ---
 
-## Adding a Screenshot
-
-Place a screenshot of the UI at `assets/overview.png`. You can rename the file, but make sure to update the path in the image markdown at the top of this README.
-
----
-
 ## License
 
 MIT License. See `LICENSE` for details.
