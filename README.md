@@ -1,6 +1,6 @@
 # AdGuard Log Viewer
 
-
+![Demo Screenshot](assets/overview.png)
 
 AdGuard Log Viewer is a real-time log viewer for AdGuard Home (AGH) logs. It provides an intuitive UI to monitor your network traffic, highlight cache hits with a blue check mark, and display processing speed for each request.
 
@@ -73,7 +73,7 @@ to see your AdGuard Home logs in real time.
 
 ## Adding a Screenshot
 
-Place a screenshot of the UI at `assets/overview.png`. You can rename the file, but make sure to update the path in the top of this README.
+Place a screenshot of the UI at `assets/overview.png`. You can rename the file, but make sure to update the path in the image markdown at the top of this README.
 
 ---
 
