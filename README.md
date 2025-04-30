@@ -27,7 +27,7 @@ AdGuard Log Viewer is a real-time log viewer for AdGuard Home (AGH) logs. It pro
 Clone the repository and navigate into it:
 
 ```bash
-git clone git@github.com:spiralshapeturtle/aghlogviewer.git
+git clone https://github.com/spiralshapeturtle/aghlogviewer.git
 cd aghlogviewer
 ```
 

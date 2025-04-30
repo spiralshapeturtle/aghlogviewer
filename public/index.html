@@ -346,6 +346,24 @@
                 display: none;
             }
         }
+        /* Voeg dit toe binnen de <style> tag */
+        td:nth-child(5) { /* Richt zich op de 5e kolom (Client) */
+            max-width: 180px; /* Maximale breedte instellen */
+            overflow: hidden; /* Verberg de inhoud die overloopt */
+            text-overflow: ellipsis; /* Voeg '...' toe aan afgekapte tekst */
+            white-space: nowrap; /* Nodig voor text-overflow */
+            vertical-align: middle; /* Zorgt voor nette verticale uitlijning */
+        }
+
+        /* Optioneel: Style de chip binnen de cel ook, als nodig */
+        td:nth-child(5) .client-chip {
+            display: inline-block; /* Zorgt dat het als een blok behandelt wordt binnen de lijn */
+            max-width: 100%; /* Zorgt dat de chip niet breder wordt dan de cel */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle; /* Belangrijk voor uitlijning */
+        }
     </style>
 </head>
 
@@ -546,7 +564,7 @@
             <td style="text-align:center">${entry.cached ? '<span class="badge cached">✔</span>' : ''}</td>
             <td style="text-align:right">${elapsed}</td>
             <td>${entry.question?.type || ''}</td>
-            <td><span class="chip client-chip">${clientName}</span></td>
+            <td title="${clientName}"><span class="chip client-chip">${clientName}</span></td>
             <td>${entry.upstream}</td>
             <td title="${domain}">${truncateDomain(domain)}</td>
             <td><span class="badge ${badge}">${entry.reason}</span></td>
