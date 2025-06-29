@@ -2,8 +2,9 @@ const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 
-const ADGUARD_HOST = process.env.ADGUARD_HOST || 'http://172.16.1.254:3000';
-const ADGUARD_AUTH = process.env.ADGUARD_AUTH || null; // "user:pass" of leeg
+// use a .env file this is in place to definen the defaults.
+const ADGUARD_HOST = process.env.ADGUARD_HOST || 'http://1.2.3.4:3000';
+const ADGUARD_AUTH = process.env.ADGUARD_AUTH || null; // user:pass or empty
 const PORT = process.env.PORT || 3000;
 
 const app = express();
